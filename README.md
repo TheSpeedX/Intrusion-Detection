@@ -10,11 +10,13 @@ A Python Program which allows you to know about the change of every motion occur
 [✓] Spilt out Videos of persons<br>
 [✓] Save only detected part with time frame<br>
 [✓] Notify user on any intrusion<br>
+[✓] Used a LightWeight ssd_mobilenet model for using in RPi<br>
+[ ] Make A Client Server Model For Multiple Cameras<br>
 
 
 Feel Free To Add More...
 
-Get The Tensorflow Model At : https://github.com/tensorflow/models/raw/master/research/object_detection/test_ckpt/ssd_inception_v2.pb
+Get The Tensorflow Model At : https://github.com/TheSpeedX/extras/raw/master/ssd_mobilenet.pb
 
 ## HOW TO RUN
 
@@ -26,7 +28,7 @@ Install Requirements by
 pip install -r requirements.txt
 ```
 
-Download The TensorFlow Model From <a href="https://github.com/tensorflow/models/raw/master/research/object_detection/test_ckpt/ssd_inception_v2.pb">here</a>
+Download The TensorFlow Model From <a href="https://github.com/TheSpeedX/extras/raw/master/ssd_mobilenet.pb">here</a>
 <br>
 
 Put The TensorFlow Model in the same Directory As the Python File
@@ -38,5 +40,5 @@ python motion_detect.py
 ```
 
 ## TeamMates
-<a href="https://github.com/adarsh1405/">Adarsh Padhi</a><br>
 <a href="https://github.com/TheSpeedX/">SpeedX</a>
+<a href="https://github.com/adarsh1405/">Adarsh Padhi</a><br>
