@@ -12,7 +12,6 @@ from collections import defaultdict
 from io import StringIO
 from matplotlib import pyplot as plt
 from PIL import Image
-import json
 
 
 from object_detection.utils import label_map_util
@@ -78,10 +77,9 @@ NOTIFY=False
 PHNUM="9999999999"  #Phone Number To Notify
 TIMESTAMP=datetime.now().strftime('%c').replace("/","_").replace(":","_").replace("-","_")
 
-APIURL="http://localhost:5000/save/CAM001"
 cap = cv2.VideoCapture(0)
-#if SAVE_OUTPUT:
-	#out = cv2.VideoWriter('output_'+TIMESTAMP+'.mp4', -1, FPS, RESXY) if SAVE_OUTPUT else None
+if SAVE_OUTPUT:
+	out = cv2.VideoWriter('output_'+TIMESTAMP+'.mp4', -1, FPS, RESXY) if SAVE_OUTPUT else None
 # Running the tensorflow session
 with detection_graph.as_default():
 	with tf.compat.v1.Session(graph=detection_graph) as sess:
@@ -118,14 +116,11 @@ with detection_graph.as_default():
 					found=np.nonzero(scores>=MIN_DETECT)
 					if 1 in classes[found]:
 						cv2.putText(img,datetime.now().strftime('%c'),(10,50), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2)
-						#out.write(img)
-						_, img_encoded = cv2.imencode('.jpg', img)
-						response = requests.post(APIURL, data=img_encoded.tostring(), headers= {'content-type': 'image/jpeg'})
-						print(response.text)
+						out.write(img)
 						NOTIFY=not alert(PHNUM) if NOTIFY else False
 				cv2.waitKey(1)
 		except:
-			# if SAVE_OUTPUT:
-				# out.release()
+			if SAVE_OUTPUT:
+				out.release()
 			cap.release()
 			cv2.destroyAllWindows()
