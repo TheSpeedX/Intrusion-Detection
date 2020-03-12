@@ -13,11 +13,34 @@ from io import StringIO
 from matplotlib import pyplot as plt
 from PIL import Image
 import json
-
+from multiprocessing import Lock, Process ,Queue
+#from queue import *
+import time
 
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
 
+
+
+CAMID="CAM001"
+APIURL="http://localhost:5000/save/"+CAMID
+
+def queue_frame(frame,frame_queue):
+	frame_queue.put(frame)
+	print("Queue Size: ",frame_queue.qsize())
+	print('Added image of size={}x{}'.format(frame.shape[1], frame.shape[0]))
+def send_frame(frame_queue):
+	c=0
+	while True:
+		print(frame_queue.qsize())
+		while frame_queue.qsize()==0:
+			c+=1
+			print("sleeped ",c)			
+			time.sleep(1)		
+		frame=frame_queue.get()
+		_, img_encoded = cv2.imencode('.jpg', frame)
+		response = requests.post(APIURL, data=img_encoded.tostring(), headers= {'content-type': 'image/jpeg'})
+		print(response.text)
 
 
 def alert(number,call=False):
@@ -72,21 +95,19 @@ category_index = label_map_util.create_category_index(categories)
 
 SAVE_OUTPUT=True
 MIN_DETECT=0.4
-FPS=10.0
 RESXY=(640,480)
 NOTIFY=False
 PHNUM="9999999999"  #Phone Number To Notify
 TIMESTAMP=datetime.now().strftime('%c').replace("/","_").replace(":","_").replace("-","_")
 
-APIURL="http://localhost:5000/save/CAM001"
-cap = cv2.VideoCapture(0)
-#if SAVE_OUTPUT:
-	#out = cv2.VideoWriter('output_'+TIMESTAMP+'.mp4', -1, FPS, RESXY) if SAVE_OUTPUT else None
-# Running the tensorflow session
-with detection_graph.as_default():
-	with tf.compat.v1.Session(graph=detection_graph) as sess:
-		ret = True
-		try:
+
+
+def main(frame_queue):
+	cap = cv2.VideoCapture(0 + cv2.CAP_DSHOW)
+	with detection_graph.as_default():
+		with tf.compat.v1.Session(graph=detection_graph) as sess:
+			ret = True
+			# try:
 			while (ret):
 				ret,image_np = cap.read()
 				# Expand dimensions since the model expects images to have shape: [1, None, None, 3]
@@ -119,13 +140,21 @@ with detection_graph.as_default():
 					if 1 in classes[found]:
 						cv2.putText(img,datetime.now().strftime('%c'),(10,50), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2)
 						#out.write(img)
-						_, img_encoded = cv2.imencode('.jpg', img)
-						response = requests.post(APIURL, data=img_encoded.tostring(), headers= {'content-type': 'image/jpeg'})
-						print(response.text)
-						NOTIFY=not alert(PHNUM) if NOTIFY else False
-				cv2.waitKey(1)
-		except:
-			# if SAVE_OUTPUT:
-				# out.release()
-			cap.release()
-			cv2.destroyAllWindows()
+						queue_frame(img,frame_queue)
+						#NOTIFY=not alert(PHNUM) if NOTIFY else False
+				cv2.waitKey(10)
+			# except:
+				# cap.release()
+				# cv2.destroyAllWindows()
+if __name__=='__main__':
+
+	frame_queue=Queue()
+	p1=Process(target=main,args=(frame_queue,))
+	p2=Process(target=send_frame,args=(frame_queue,))
+	p2.daemon=True
+	p1.start()
+	time.sleep(5)
+	p2.start()
+	p1.join()
+	p2.join()
+	print("Job Completed")

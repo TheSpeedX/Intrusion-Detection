@@ -11,7 +11,7 @@ app = Flask(__name__)
 def test(cam_id):
 	r = request
 	# convert string of image data to uint8
-	nparr = np.fromstring(r.data, np.uint8)
+	nparr = np.frombuffer(r.data, np.uint8)
 	# decode image
 	img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 	if not os.path.exists(cam_id):
