@@ -13,9 +13,9 @@ from io import StringIO
 from matplotlib import pyplot as plt
 from PIL import Image
 import json
-from multiprocessing import Lock, Process ,Queue
-#from queue import *
 import time
+import threading
+
 
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
@@ -25,44 +25,22 @@ from object_detection.utils import visualization_utils as vis_util
 CAMID="CAM001"
 APIURL="http://localhost:5000/save/"+CAMID
 
-def queue_frame(frame,frame_queue):
-	frame_queue.put(frame)
-	print("Queue Size: ",frame_queue.qsize())
-	print('Added image of size={}x{}'.format(frame.shape[1], frame.shape[0]))
 def send_frame(frame_queue):
 	c=0
 	while True:
-		print(frame_queue.qsize())
-		while frame_queue.qsize()==0:
+		print(len(frame_queue))
+		while len(frame_queue)==0:
 			c+=1
 			print("sleeped ",c)			
 			time.sleep(1)		
-		frame=frame_queue.get()
+		frame=frame_queue.pop(0)
 		_, img_encoded = cv2.imencode('.jpg', frame)
 		response = requests.post(APIURL, data=img_encoded.tostring(), headers= {'content-type': 'image/jpeg'})
 		print(response.text)
 
 
-def alert(number,call=False):
-	cookies = {"X-App-Version": "1.0", "X-Phone-Platform": "web", "X-Default-City": "1", "X-Pincode": "400001", "XdI": "0d429faa36c459599d17506cad32cb25", "_gcl_au": "1.1.782225019.1575836626", "_omappvp": "iTEq3HaHcwk52kq9H5VOubYq7rrvfnz8pYZNWJPOeYJR14H6BOzCCODJpYMKlETqLuoAr2jH8LfGUUv7SQsToibzWk1PqWBC", "_omappvs": "1575836625625", "WZRK_S_R9Z-WWR-854Z": "%7B%22p%22%3A1%2C%22s%22%3A1575836625%2C%22t%22%3A1575836627%7D", "WZRK_G": "52d860bf981a489ca4dbd9d97078697b"}
-	head = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0", "Accept": "*/*", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "x-real-ip": "", "x-ua": "", "x-ff": "", "Content-Type": "application/json", "Origin": "https://pharmeasy.in", "DNT": "1", "Connection": "close", "Referer": "https://pharmeasy.in/"}
-	if call:
-		r=requests.post("https://pharmeasy.in/api/auth/login", headers=burp0_headers, cookies=burp0_cookies, json={"contactNumber": number, "hasCalled": True, "profileEmail": ""}).text
-	else:
-		r=requests.post("https://pharmeasy.in/api/auth/requestOTP", headers=head, cookies=cookies, json={"contactNumber": number}).text
-	print("Request Sent")
-	return '"status":1' in r
 
-# # Model preparation 
-# Any model exported using the `export_inference_graph.py` tool can be loaded here simply by changing `PATH_TO_CKPT` to point to a new .pb file.  
-# By default we use an "SSD with Mobilenet" model here. See the [detection model zoo](https://github.com/tensorflow/models/blob/master/object_detection/g3doc/detection_model_zoo.md) for a list of other models that can be run out-of-the-box with varying speeds and accuracies.
 
-# Path to frozen detection graph. This is the actual model that is used for the object detection.
-
-#SSD_Inception Model
-#PATH_TO_CKPT = 'ssd_inception_v2.pb'
-
-#SSD MobileNet
 PATH_TO_CKPT = 'ssd_mobilenet.pb'
 
 
@@ -140,7 +118,7 @@ def main(frame_queue):
 					if 1 in classes[found]:
 						cv2.putText(img,datetime.now().strftime('%c'),(10,50), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2)
 						#out.write(img)
-						queue_frame(img,frame_queue)
+						frame_queue.append(img)
 						#NOTIFY=not alert(PHNUM) if NOTIFY else False
 				cv2.waitKey(10)
 			# except:
@@ -148,9 +126,9 @@ def main(frame_queue):
 				# cv2.destroyAllWindows()
 if __name__=='__main__':
 
-	frame_queue=Queue()
-	p1=Process(target=main,args=(frame_queue,))
-	p2=Process(target=send_frame,args=(frame_queue,))
+	frame_queue = []
+	p1=threading.Thread(target=main, args=(frame_queue,))
+	p2=threading.Thread(target=send_frame,args=(frame_queue,))
 	p2.daemon=True
 	p1.start()
 	time.sleep(5)
